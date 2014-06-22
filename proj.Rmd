@@ -1,0 +1,49 @@
+Personal activity analysis
+========================================================
+
+```{r setup, include=FALSE}
+opts_chunk$set(cache=TRUE)
+``` 
+
+Lets remove bad records which contain NAs. And get rid of columns which contain empty spaces and NA's.
+```{r}
+train<-read.csv('training.csv')
+train<-train[which(is.na(train[,150])),]  #bad cases over all columns
+#names(train)
+#train[1:10,c(1:4,150,160)]
+#summary(train$classe)
+
+badCols<-c()
+for (i in 8:159){
+#  print(table(is.na(train[,i])),str(i))
+  #print(any(train[,i]==""),str(i))
+  if (any(is.na(train[,i])) | any(train[,i]=="")) {
+    badCols<-c(badCols,i)
+  }
+}
+```
+
+Lets use Random-forest algorithm to fit a model with 300 trees. But before that we are reducing number of features with principal component analysis. So these principal components describe more than 90% of variation. We are training our model using only 2000 records. 
+We apply cross-validation by option 'method = "oob"' (Out of Bag).
+
+
+```{r}
+trainInd<-sample(nrow(train),2000)
+require(caret)
+fit2<-train(classe~.,preprocess='pca',data=train[trainInd,-c(1:8,badCols)],method='rf',
+            #na.action=na.omit,
+            ntree=300,
+            trControl=trainControl(method = "oob",preProcOptions=list(thresh=.9)))
+```
+
+Lets calculate our out of sample error.
+
+
+```{r}
+
+predicted<-predict(fit2,newdata=train[-trainInd,])
+print(paste('Out of sample error = ',table(predicted==train[-trainInd,160])[2]/nrow(train)))
+
+```
+
+
